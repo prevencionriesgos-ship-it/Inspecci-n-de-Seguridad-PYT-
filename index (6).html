@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orden de Trabajo — PYT Systems SpA</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+  :root {
+    --azul: #0A2540;
+    --azul-med: #1A4A7A;
+    --azul-bright: #2563EB;
+    --azul-pale: #EFF6FF;
+    --verde: #059669;
+    --verde-pale: #ECFDF5;
+    --rojo: #DC2626;
+    --rojo-pale: #FEF2F2;
+    --amarillo: #D97706;
+    --amarillo-pale: #FFFBEB;
+    --gris: #6B7280;
+    --gris-pale: #F9FAFB;
+    --border: #E5E7EB;
+    --text: #111827;
+    --text-soft: #6B7280;
+    --white: #FFFFFF;
+    --font-main: 'IBM Plex Sans', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-main); background: #F1F5F9; color: var(--text); min-height: 100vh; }
+
+  .topbar {
+    background: var(--azul); color: white; padding: 0 2rem; height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .topbar-logo {
+    width: 36px; height: 36px; background: var(--azul-bright); border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-weight: 600; font-size: 12px; color: white; letter-spacing: -1px;
+  }
+  .topbar-title { font-size: 15px; font-weight: 600; }
+  .topbar-sub { font-size: 11px; opacity: 0.5; font-family: var(--font-mono); }
+
+  .progress-wrap {
+    background: white; border-bottom: 1px solid var(--border);
+    padding: 0 2rem; display: flex; align-items: center; gap: 1rem;
+    height: 48px; overflow-x: auto;
+  }
+  .step-pill {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; font-family: var(--font-mono);
+    color: var(--gris); white-space: nowrap; cursor: pointer;
+    padding: 4px 8px; border-radius: 4px; transition: all 0.15s;
+  }
+  .step-pill.active { color: var(--azul-bright); background: var(--azul-pale); }
+  .step-pill.done { color: var(--verde); }
+  .step-num {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--border); color: var(--gris);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600;
+  }
+  .step-pill.active .step-num { background: var(--azul-bright); color: white; }
+  .step-pill.done .step-num { background: var(--verde); color: white; }
+  .step-sep { color: var(--border); font-size: 16px; }
+
+  .main { max-width: 860px; margin: 2rem auto; padding: 0 1rem 4rem; }
+
+  .section-card {
+    background: white; border: 1px solid var(--border);
+    border-radius: 12px; margin-bottom: 1.5rem; overflow: hidden; display: none;
+  }
+  .section-card.active { display: block; }
+  .section-head {
+    background: var(--azul); color: white; padding: 1rem 1.5rem;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .section-num {
+    width: 32px; height: 32px; background: rgba(255,255,255,0.15);
+    border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-weight: 600; font-size: 14px; flex-shrink: 0;
+  }
+  .section-title { font-size: 15px; font-weight: 500; }
+  .section-desc { font-size: 12px; opacity: 0.6; margin-top: 2px; }
+  .section-body { padding: 1.5rem; }
+
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  .field-grid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+  .field-grid.cols1 { grid-template-columns: 1fr; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label {
+    font-size: 12px; font-weight: 500; color: var(--text-soft);
+    letter-spacing: 0.04em; text-transform: uppercase; font-family: var(--font-mono);
+  }
+  .field label .req { color: var(--rojo); }
+  .field input, .field select, .field textarea {
+    border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px;
+    font-size: 14px; font-family: var(--font-main); color: var(--text); background: white;
+    transition: border-color 0.15s, box-shadow 0.15s; outline: none;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    border-color: var(--azul-bright); box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+  }
+  .field textarea { resize: vertical; min-height: 70px; }
+
+  /* Supervisor card selector */
+  .supervisor-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr));
+    gap: 8px; margin-top: 6px;
+  }
+  .sup-card {
+    border: 1.5px solid var(--border); border-radius: 8px; padding: 10px 12px;
+    cursor: pointer; transition: all 0.15s; background: white;
+  }
+  .sup-card:hover { border-color: var(--azul-bright); background: var(--azul-pale); }
+  .sup-card.selected { border-color: var(--azul-bright); background: var(--azul-pale); }
+  .sup-card.selected .sup-name { color: var(--azul-bright); }
+  .sup-name { font-size: 13px; font-weight: 600; line-height: 1.3; }
+  .sup-rut { font-size: 11px; color: var(--gris); font-family: var(--font-mono); margin-top: 3px; }
+  .sup-check {
+    width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border);
+    float: right; margin-top: 2px; transition: all 0.15s; background: white;
+  }
+  .sup-card.selected .sup-check { background: var(--azul-bright); border-color: var(--azul-bright); }
+
+  /* tipo de trabajo checkboxes */
+  .tipo-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .tipo-btn {
+    padding: 7px 14px; border: 1.5px solid var(--border); border-radius: 6px;
+    font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s;
+    font-family: var(--font-main); background: white;
+  }
+  .tipo-btn.sel { border-color: var(--azul-bright); background: var(--azul-pale); color: var(--azul-bright); }
+  .tipo-btn-otro { display: none; margin-top: 6px; }
+  .tipo-btn-otro.show { display: block; }
+
+  .radio-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .radio-btn {
+    display: flex; align-items: center; gap: 6px; padding: 6px 12px;
+    border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+    font-size: 13px; transition: all 0.15s; user-select: none;
+  }
+  .radio-btn input { display: none; }
+  .radio-btn.sel-clima { border-color: var(--azul-bright); background: var(--azul-pale); color: var(--azul-bright); }
+  .radio-btn.sel-retro { border-color: var(--verde); background: var(--verde-pale); color: var(--verde); }
+
+  .check-table { width: 100%; border-collapse: collapse; margin-bottom: 0.5rem; }
+  .check-table th {
+    background: var(--gris-pale); font-size: 11px; font-family: var(--font-mono);
+    font-weight: 600; color: var(--text-soft); letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border);
+  }
+  .check-table th.center { text-align: center; }
+  .check-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 14px; vertical-align: middle; }
+  .check-table tr:last-child td { border-bottom: none; }
+  .check-table tr:hover td { background: #FAFAFA; }
+  .check-table td.center { text-align: center; }
+  .check-table td.obs input {
+    width: 100%; border: 1px solid var(--border); border-radius: 4px;
+    padding: 4px 8px; font-size: 13px; font-family: var(--font-main); outline: none; background: white;
+  }
+  .check-table td.obs input:focus { border-color: var(--azul-bright); box-shadow: 0 0 0 2px rgba(37,99,235,0.1); }
+
+  .radio-check {
+    width: 22px; height: 22px; border: 2px solid var(--border); border-radius: 50%;
+    cursor: pointer; display: inline-block; position: relative;
+    transition: all 0.15s; vertical-align: middle;
+  }
+  .radio-check.ok { border-color: var(--verde); background: var(--verde); }
+  .radio-check.ok::after { content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: white; font-size: 11px; font-weight: 700; }
+  .radio-check.nc { border-color: var(--rojo); background: var(--rojo); }
+  .radio-check.nc::after { content: '✗'; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: white; font-size: 12px; font-weight: 700; }
+  .radio-check.seg { border-color: var(--verde); background: var(--verde); }
+  .radio-check.seg::after { content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: white; font-size: 11px; font-weight: 700; }
+  .radio-check.ins { border-color: var(--amarillo); background: var(--amarillo); }
+  .radio-check.ins::after { content: '!'; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: white; font-size: 11px; font-weight: 700; }
+  .radio-check.na { border-color: #9CA3AF; background: #9CA3AF; }
+  .radio-check.na::after { content: 'N/A'; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: white; font-size: 8px; font-weight: 700; letter-spacing: -0.5px; }
+
+  .foto-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  .foto-box {
+    border: 2px dashed var(--border); border-radius: 8px; padding: 1.5rem 1rem;
+    text-align: center; cursor: pointer; transition: all 0.15s; position: relative; overflow: hidden;
+  }
+  .foto-box:hover { border-color: var(--azul-bright); background: var(--azul-pale); }
+  .foto-box.has-foto { border-style: solid; border-color: var(--verde); background: var(--verde-pale); }
+  .foto-box input[type="file"] { display: none; }
+  .foto-icon { font-size: 24px; margin-bottom: 6px; }
+  .foto-label { font-size: 12px; font-weight: 500; color: var(--text-soft); }
+  .foto-sub { font-size: 11px; color: var(--gris); margin-top: 2px; }
+  .foto-preview { width: 100%; max-height: 120px; object-fit: cover; border-radius: 4px; margin-bottom: 6px; }
+  .foto-desc-input { width: 100%; border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; font-size: 12px; margin-top: 6px; font-family: var(--font-main); outline: none; }
+
+  .accion-table { width: 100%; border-collapse: collapse; }
+  .accion-table th {
+    background: var(--azul-pale); font-size: 11px; font-family: var(--font-mono); font-weight: 600;
+    color: var(--azul-med); letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 8px 10px; text-align: left; border: 1px solid var(--border);
+  }
+  .accion-table td { border: 1px solid var(--border); padding: 4px; }
+  .accion-table td input { width: 100%; border: none; outline: none; padding: 6px 8px; font-size: 13px; font-family: var(--font-main); background: transparent; }
+  .accion-table td input:focus { background: var(--azul-pale); }
+
+  .riesgo-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .riesgo-btn { padding: 6px 16px; border-radius: 20px; border: 2px solid var(--border); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; font-family: var(--font-mono); }
+  .riesgo-btn[data-nivel="Bajo"] { border-color: #86EFAC; color: #16A34A; }
+  .riesgo-btn[data-nivel="Bajo"].sel { background: #DCFCE7; border-color: #16A34A; }
+  .riesgo-btn[data-nivel="Medio"] { border-color: #FDE68A; color: #D97706; }
+  .riesgo-btn[data-nivel="Medio"].sel { background: #FEF9C3; border-color: #D97706; }
+  .riesgo-btn[data-nivel="Alto"] { border-color: #FCA5A5; color: #DC2626; }
+  .riesgo-btn[data-nivel="Alto"].sel { background: #FEE2E2; border-color: #DC2626; }
+  .riesgo-btn[data-nivel="Crítico"] { border-color: #7F1D1D; color: #7F1D1D; }
+  .riesgo-btn[data-nivel="Crítico"].sel { background: #FEE2E2; border-color: #7F1D1D; font-weight: 700; }
+
+  .resultado-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .resultado-btn { padding: 8px 16px; border-radius: 6px; border: 2px solid var(--border); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+  .resultado-btn[data-res="Conforme"] { border-color: #86EFAC; color: #16A34A; }
+  .resultado-btn[data-res="Conforme"].sel { background: #DCFCE7; border-color: #16A34A; }
+  .resultado-btn[data-res="Conforme con observaciones"] { border-color: #FDE68A; color: #D97706; }
+  .resultado-btn[data-res="Conforme con observaciones"].sel { background: #FEF9C3; border-color: #D97706; }
+  .resultado-btn[data-res="No conforme"] { border-color: #FCA5A5; color: #DC2626; }
+  .resultado-btn[data-res="No conforme"].sel { background: #FEE2E2; border-color: #DC2626; }
+
+  .nav-buttons {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 1.25rem 1.5rem; border-top: 1px solid var(--border); background: var(--gris-pale);
+  }
+  .btn { padding: 9px 20px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; font-family: var(--font-main); transition: all 0.15s; display: flex; align-items: center; gap: 6px; }
+  .btn-primary { background: var(--azul); color: white; }
+  .btn-primary:hover { background: var(--azul-med); }
+  .btn-outline { background: white; color: var(--text); border: 1px solid var(--border); }
+  .btn-outline:hover { background: var(--gris-pale); }
+  .btn-green { background: var(--verde); color: white; font-size: 15px; padding: 10px 28px; }
+  .btn-green:hover { background: #047857; }
+
+  .note { font-size: 12px; color: var(--gris); font-family: var(--font-mono); margin-top: 6px; }
+  .divider { height: 1px; background: var(--border); margin: 1.25rem 0; }
+
+  /* ===== BOTÓN DESCARGA PDF ===== */
+  .btn-pdf {
+    display: flex; align-items: center; gap: 6px;
+    padding: 9px 16px; border-radius: 8px; border: none; cursor: pointer;
+    font-size: 13px; font-weight: 600; font-family: var(--font-main);
+    background: #DC2626; color: white; transition: all 0.2s;
+  }
+  .btn-pdf:hover { background: #B91C1C; transform: translateY(-1px); }
+  .btn-pdf:active { transform: translateY(0); }
+
+  /* ===== BOTÓN ENVIAR CORREO ===== */
+  .btn-email {
+    display: flex; align-items: center; gap: 6px;
+    padding: 9px 16px; border-radius: 8px; border: none; cursor: pointer;
+    font-size: 13px; font-weight: 600; font-family: var(--font-main);
+    background: #0A2540; color: white; transition: all 0.2s;
+  }
+  .btn-email:hover { background: #1A4A7A; transform: translateY(-1px); }
+
+  /* ===== MODAL EMAIL ===== */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); z-index: 999;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: white; border-radius: 14px; padding: 2rem;
+    width: 90%; max-width: 440px; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    animation: modalIn 0.2s ease;
+  }
+  @keyframes modalIn { from { opacity:0; transform:scale(0.95); } to { opacity:1; transform:scale(1); } }
+  .modal-title { font-size: 17px; font-weight: 600; color: var(--azul); margin-bottom: 4px; }
+  .modal-sub { font-size: 13px; color: var(--gris); margin-bottom: 1.25rem; }
+  .modal-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 1rem; }
+  .modal-field label { font-size: 12px; font-weight: 600; color: var(--text-soft); text-transform: uppercase; font-family: var(--font-mono); letter-spacing: 0.04em; }
+  .modal-field input { border: 1.5px solid var(--border); border-radius: 8px; padding: 9px 12px; font-size: 14px; outline: none; font-family: var(--font-main); }
+  .modal-field input:focus { border-color: var(--azul-bright); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+  .modal-actions { display: flex; gap: 8px; margin-top: 1.25rem; }
+  .modal-btn-send { flex: 1; padding: 10px; border-radius: 8px; border: none; background: var(--azul); color: white; font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--font-main); transition: background 0.15s; }
+  .modal-btn-send:hover { background: var(--azul-med); }
+  .modal-btn-send:disabled { background: var(--gris); cursor: not-allowed; }
+  .modal-btn-cancel { padding: 10px 18px; border-radius: 8px; border: 1px solid var(--border); background: white; color: var(--text); font-size: 14px; cursor: pointer; font-family: var(--font-main); }
+  .modal-status { font-size: 13px; margin-top: 10px; text-align: center; min-height: 18px; }
+  .modal-status.ok { color: var(--verde); }
+  .modal-status.err { color: var(--rojo); }
+
+  /* ===== NOTA EMAILJS CONFIG ===== */
+  .emailjs-config-note {
+    background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px;
+    padding: 10px 14px; font-size: 12px; color: #92400E; margin-bottom: 12px;
+    font-family: var(--font-mono); display: none;
+  }
+  .emailjs-config-note.show { display: block; }
+
+  /* ===== INFORME ===== */
+  #informe-section { display: none; }
+  .informe-wrap { background: white; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+
+  .informe-header { background: var(--azul); color: white; padding: 2rem; }
+  .informe-header-row { display: flex; justify-content: space-between; align-items: flex-start; }
+  .informe-titulo { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+  .informe-empresa { font-size: 16px; font-weight: 300; opacity: 0.8; margin-top: 2px; letter-spacing: 0.05em; font-family: var(--font-mono); }
+  .informe-sub { font-size: 12px; opacity: 0.5; margin-top: 4px; font-family: var(--font-mono); }
+  .informe-badge { padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; font-family: var(--font-mono); }
+  .badge-conforme { background: #DCFCE7; color: #16A34A; }
+  .badge-observaciones { background: #FEF9C3; color: #D97706; }
+  .badge-noconforme { background: #FEE2E2; color: #DC2626; }
+
+  .informe-meta { display: grid; grid-template-columns: repeat(4,1fr); gap: 0; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 1.5rem; padding-top: 1.5rem; }
+  .meta-item { padding: 0 1rem 0 0; }
+  .meta-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.5; font-family: var(--font-mono); }
+  .meta-val { font-size: 14px; font-weight: 500; margin-top: 2px; }
+
+  .informe-body { padding: 2rem; }
+  .inf-section { margin-bottom: 2rem; }
+  .inf-section-title {
+    font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--azul-bright); font-family: var(--font-mono);
+    border-bottom: 2px solid var(--azul-bright); padding-bottom: 6px; margin-bottom: 1rem;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .inf-score { font-size: 13px; font-weight: 500; padding: 2px 10px; border-radius: 10px; }
+  .score-ok { background: var(--verde-pale); color: var(--verde); }
+  .score-warn { background: var(--amarillo-pale); color: var(--amarillo); }
+  .score-bad { background: var(--rojo-pale); color: var(--rojo); }
+
+  .inf-check-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid #F3F4F6; font-size: 14px; }
+  .inf-check-row:last-child { border-bottom: none; }
+  .inf-status { font-size: 11px; font-weight: 600; font-family: var(--font-mono); padding: 2px 8px; border-radius: 4px; flex-shrink: 0; margin-left: 8px; }
+  .st-c { background: var(--verde-pale); color: var(--verde); }
+  .st-nc { background: var(--rojo-pale); color: var(--rojo); }
+  .st-no { background: var(--gris-pale); color: var(--gris); }
+  .st-seg { background: var(--verde-pale); color: var(--verde); }
+  .st-ins { background: var(--amarillo-pale); color: var(--amarillo); }
+  .st-na  { background: #F3F4F6; color: #6B7280; }
+  .inf-obs { font-size: 12px; color: var(--text-soft); font-style: italic; margin-left: 8px; }
+
+  .accion-inf-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .accion-inf-table th { background: var(--gris-pale); padding: 7px 10px; text-align: left; border: 1px solid var(--border); font-size: 11px; font-family: var(--font-mono); color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.04em; }
+  .accion-inf-table td { border: 1px solid var(--border); padding: 7px 10px; }
+
+  .summary-boxes { display: grid; grid-template-columns: repeat(4,1fr); gap: 1rem; margin-bottom: 2rem; }
+  .sum-box { background: var(--gris-pale); border-radius: 8px; padding: 1rem; text-align: center; border: 1px solid var(--border); }
+  .sum-num { font-size: 28px; font-weight: 600; font-family: var(--font-mono); }
+  .sum-label { font-size: 11px; color: var(--gris); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .sum-green { color: var(--verde); }
+  .sum-red { color: var(--rojo); }
+  .sum-amber { color: var(--amarillo); }
+
+  .firma-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 2rem; }
+  .firma-box { border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; background: var(--gris-pale); }
+  .firma-title { font-size: 12px; font-weight: 600; color: var(--text-soft); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.04em; }
+  .firma-name { font-size: 15px; font-weight: 600; margin-top: 6px; }
+  .firma-rut { font-size: 13px; color: var(--gris); margin-top: 2px; font-family: var(--font-mono); }
+  .firma-line { height: 1px; background: var(--border); margin: 1rem 0 0.5rem; }
+  .firma-sign-label { font-size: 11px; color: var(--gris); font-family: var(--font-mono); }
+
+  .informe-footer {
+    padding: 1rem 2rem; border-top: 1px solid var(--border); background: var(--gris-pale);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .informe-footer-text { font-size: 12px; color: var(--gris); font-family: var(--font-mono); }
+  .btn-print { padding: 8px 18px; background: var(--azul); color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: var(--font-main); display: flex; align-items: center; gap: 6px; }
+  .btn-print:hover { background: var(--azul-med); }
+  .btn-whatsapp { padding: 8px 18px; background: #25D366; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: var(--font-main); display: flex; align-items: center; gap: 6px; }
+  .btn-whatsapp:hover { background: #1ebe5d; }
+  .btn-nueva { padding: 8px 18px; background: white; color: var(--text); border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: var(--font-main); }
+
+  .foto-inf-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 0.75rem; }
+  .foto-inf-item img { width: 100%; height: 90px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); }
+  .foto-inf-item .foto-inf-desc { font-size: 11px; color: var(--gris); margin-top: 4px; text-align: center; }
+  .foto-placeholder { width: 100%; height: 90px; background: var(--gris-pale); border-radius: 6px; border: 1px dashed var(--border); display: flex; align-items: center; justify-content: center; font-size: 20px; }
+
+  @media print {
+    .topbar, .progress-wrap, .nav-buttons, .informe-footer .btn-print, .informe-footer .btn-nueva { display: none !important; }
+    body { background: white; }
+    .main { margin: 0; padding: 0; max-width: 100%; }
+    .informe-wrap { border: none; border-radius: 0; }
+    #form-section { display: none !important; }
+    #informe-section { display: block !important; }
+  }
+  @media (max-width: 600px) {
+    .field-grid { grid-template-columns: 1fr; }
+    .supervisor-grid { grid-template-columns: 1fr 1fr; }
+    .informe-meta { grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .summary-boxes { grid-template-columns: 1fr 1fr; }
+    .foto-inf-grid { grid-template-columns: 1fr 1fr; }
+    .firma-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-logo">PYT</div>
+    <div>
+      <div class="topbar-title">PYT Systems SpA</div>
+      <div class="topbar-sub">Orden de trabajo — Inspección de Seguridad</div>
+    </div>
+  </div>
+  <div style="font-size:12px;opacity:0.4;font-family:var(--font-mono)">PYT Systems SpA</div>
+</div>
+
+<div class="progress-wrap" id="progress-wrap">
+  <div class="step-pill active" onclick="goTo(1)" id="step1"><span class="step-num">1</span> Datos OT</div>
+  <span class="step-sep">›</span>
+  <div class="step-pill" onclick="goTo(2)" id="step2"><span class="step-num">2</span> EPP</div>
+  <span class="step-sep">›</span>
+  <div class="step-pill" onclick="goTo(3)" id="step3"><span class="step-num">3</span> Señalización</div>
+  <span class="step-sep">›</span>
+  <div class="step-pill" onclick="goTo(4)" id="step4"><span class="step-num">4</span> Herramientas</div>
+  <span class="step-sep">›</span>
+  <div class="step-pill" onclick="goTo(5)" id="step5"><span class="step-num">5</span> Conducta</div>
+  <span class="step-sep">›</span>
+  <div class="step-pill" onclick="goTo(6)" id="step6"><span class="step-num">6</span> Fotos</div>
+  <span class="step-sep">›</span>
+  <div class="step-pill" onclick="goTo(7)" id="step7"><span class="step-num">7</span> Acciones</div>
+  <span class="step-sep">›</span>
+  <div class="step-pill" onclick="goTo(8)" id="step8"><span class="step-num">8</span> Cierre</div>
+</div>
+
+<div class="main">
+<div id="form-section">
+
+<!-- SECCIÓN 1: DATOS OT -->
+<div class="section-card active" id="sec1">
+  <div class="section-head">
+    <div class="section-num">1</div>
+    <div>
+      <div class="section-title">Datos de la orden de trabajo</div>
+      <div class="section-desc">PYT Systems SpA — Telecomunicaciones FFOO</div>
+    </div>
+  </div>
+  <div class="section-body">
+
+    <div class="field-grid">
+      <div class="field"><label>Fecha <span class="req">*</span></label><input type="date" id="fecha"></div>
+      <div class="field"><label>N° trabajadores</label><input type="number" id="ntrabajadores" placeholder="Ej: 4" min="1"></div>
+    </div>
+
+    <div class="field-grid">
+      <div class="field"><label>Hora inicio</label><input type="time" id="hora_ini"></div>
+      <div class="field"><label>Hora término</label><input type="time" id="hora_fin"></div>
+    </div>
+
+    <div class="field-grid">
+      <div class="field"><label>Dirección / Ubicación <span class="req">*</span></label><input type="text" id="direccion" placeholder="Calle, número, sector"></div>
+      <div class="field"><label>Comuna / Región</label><input type="text" id="region" placeholder="Ej: Providencia, RM"></div>
+    </div>
+
+    <div class="field" style="margin-bottom:1rem">
+      <label>Tipo de trabajo <span class="req">*</span></label>
+      <div class="tipo-grid" id="tipo-grid">
+        <button type="button" class="tipo-btn" data-tipo="Fusión en tendido aéreo" onclick="toggleTipo(this)">🔗 Fusión en tendido aéreo</button>
+        <button type="button" class="tipo-btn" data-tipo="Fusión en tendido subterráneo" onclick="toggleTipo(this)">⛏ Fusión en tendido subterráneo</button>
+        <button type="button" class="tipo-btn" data-tipo="Revisión de mufas" onclick="toggleTipo(this)">🔧 Revisión de mufas</button>
+        <button type="button" class="tipo-btn" data-tipo="Trabajo en altura" onclick="toggleTipo(this)">🪜 Trabajo en altura</button>
+        <button type="button" class="tipo-btn" data-tipo="Trabajo a nivel de piso" onclick="toggleTipo(this)">🦺 Trabajo a nivel de piso</button>
+        <button type="button" class="tipo-btn" data-tipo="otro" onclick="toggleTipo(this)">+ Otro</button>
+      </div>
+      <div class="tipo-btn-otro" id="tipo-otro-wrap">
+        <input type="text" id="tipo-otro" placeholder="Especificar tipo de trabajo...">
+      </div>
+    </div>
+
+    <div class="field" style="margin-bottom:1rem">
+      <label>Supervisor a cargo <span class="req">*</span></label>
+      <div class="supervisor-grid" id="sup-grid">
+        <div class="sup-card" onclick="selectSup(this)" data-nombre="SCHIFFERLI MANRIQUEZ MIRKO ANDRÉS" data-rut="18.765.231-6">
+          <span class="sup-check"></span>
+          <div class="sup-name">Schifferli Manríquez<br>Mirko Andrés</div>
+          <div class="sup-rut">18.765.231-6</div>
+        </div>
+        <div class="sup-card" onclick="selectSup(this)" data-nombre="SEPÚLVEDA ABARCA RICARDO RODRIGO" data-rut="12.670.732-0">
+          <span class="sup-check"></span>
+          <div class="sup-name">Sepúlveda Abarca<br>Ricardo Rodrigo</div>
+          <div class="sup-rut">12.670.732-0</div>
+        </div>
+        <div class="sup-card" onclick="selectSup(this)" data-nombre="ASTUDILLO GAJARDO MANUEL ERNESTO" data-rut="18.338.344-2">
+          <span class="sup-check"></span>
+          <div class="sup-name">Astudillo Gajardo<br>Manuel Ernesto</div>
+          <div class="sup-rut">18.338.344-2</div>
+        </div>
+        <div class="sup-card" onclick="selectSup(this)" data-nombre="GUAJARDO SÁNCHEZ JOSÉ IGNACIO" data-rut="19.347.834-4">
+          <span class="sup-check"></span>
+          <div class="sup-name">Guajardo Sánchez<br>José Ignacio</div>
+          <div class="sup-rut">19.347.834-4</div>
+        </div>
+        <div class="sup-card" onclick="selectSup(this)" data-nombre="ZAVALA VÁSQUEZ MIGUEL ISAAC" data-rut="15.451.162-8">
+          <span class="sup-check"></span>
+          <div class="sup-name">Zavala Vásquez<br>Miguel Isaac</div>
+          <div class="sup-rut">15.451.162-8</div>
+        </div>
+        <div class="sup-card" onclick="selectSup(this)" data-nombre="CATALÁN ARAYA JUAN CARLOS" data-rut="15.610.268-7">
+          <span class="sup-check"></span>
+          <div class="sup-name">Catalán Araya<br>Juan Carlos</div>
+          <div class="sup-rut">15.610.268-7</div>
+        </div>
+        <div class="sup-card" onclick="selectSup(this)" data-nombre="OSORIO GUAJARDO SEBASTIÁN ESTEBAN" data-rut="17.312.623-9">
+          <span class="sup-check"></span>
+          <div class="sup-name">Osorio Guajardo<br>Sebastián Esteban</div>
+          <div class="sup-rut">17.312.623-9</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Condición climática</label>
+      <div class="radio-row" id="clima-row">
+        <label class="radio-btn" onclick="selectRadio(this,'clima-row','sel-clima')"><input type="radio" name="clima" value="Despejado"> ☀ Despejado</label>
+        <label class="radio-btn" onclick="selectRadio(this,'clima-row','sel-clima')"><input type="radio" name="clima" value="Nublado"> ⛅ Nublado</label>
+        <label class="radio-btn" onclick="selectRadio(this,'clima-row','sel-clima')"><input type="radio" name="clima" value="Lluvia leve"> 🌦 Lluvia leve</label>
+        <label class="radio-btn" onclick="selectRadio(this,'clima-row','sel-clima')"><input type="radio" name="clima" value="Lluvia intensa"> 🌧 Lluvia intensa</label>
+        <label class="radio-btn" onclick="selectRadio(this,'clima-row','sel-clima')"><input type="radio" name="clima" value="Viento fuerte"> 💨 Viento fuerte</label>
+      </div>
+    </div>
+  </div>
+  <div class="nav-buttons">
+    <div></div>
+    <button class="btn btn-primary" onclick="goTo(2)">Siguiente → EPP</button>
+  </div>
+</div>
+
+<!-- SECCIÓN 2: EPP -->
+<div class="section-card" id="sec2">
+  <div class="section-head">
+    <div class="section-num">2</div>
+    <div>
+      <div class="section-title">EPP y equipamiento de seguridad</div>
+      <div class="section-desc">Verificar uso correcto de equipos de protección personal</div>
+    </div>
+  </div>
+  <div class="section-body">
+    <table class="check-table">
+      <thead><tr><th>Ítem de verificación</th><th class="center" style="width:70px">Cumple</th><th class="center" style="width:70px">No cumple</th><th class="center" style="width:70px">No aplica</th><th style="width:200px">Observación</th></tr></thead>
+      <tbody id="epp-body"></tbody>
+    </table>
+    <p class="note">Clic en el círculo para marcar estado.</p>
+  </div>
+  <div class="nav-buttons">
+    <button class="btn btn-outline" onclick="goTo(1)">← Anterior</button>
+    <button class="btn btn-primary" onclick="goTo(3)">Siguiente → Señalización</button>
+  </div>
+</div>
+
+<!-- SECCIÓN 3: SEÑALIZACIÓN -->
+<div class="section-card" id="sec3">
+  <div class="section-head">
+    <div class="section-num">3</div>
+    <div>
+      <div class="section-title">Señalización y demarcación vía pública</div>
+      <div class="section-desc">Verificar correcta señalización del área de trabajo</div>
+    </div>
+  </div>
+  <div class="section-body">
+    <table class="check-table">
+      <thead><tr><th>Ítem de verificación</th><th class="center" style="width:70px">Cumple</th><th class="center" style="width:70px">No cumple</th><th class="center" style="width:70px">No aplica</th><th style="width:200px">Observación</th></tr></thead>
+      <tbody id="señal-body"></tbody>
+    </table>
+  </div>
+  <div class="nav-buttons">
+    <button class="btn btn-outline" onclick="goTo(2)">← Anterior</button>
+    <button class="btn btn-primary" onclick="goTo(4)">Siguiente → Herramientas</button>
+  </div>
+</div>
+
+<!-- SECCIÓN 4: HERRAMIENTAS -->
+<div class="section-card" id="sec4">
+  <div class="section-head">
+    <div class="section-num">4</div>
+    <div>
+      <div class="section-title">Herramientas, equipos y vehículos</div>
+      <div class="section-desc">Estado y certificación de equipos y vehículos de trabajo</div>
+    </div>
+  </div>
+  <div class="section-body">
+    <table class="check-table">
+      <thead><tr><th>Ítem de verificación</th><th class="center" style="width:70px">Cumple</th><th class="center" style="width:70px">No cumple</th><th class="center" style="width:70px">No aplica</th><th style="width:200px">Observación</th></tr></thead>
+      <tbody id="herr-body"></tbody>
+    </table>
+  </div>
+  <div class="nav-buttons">
+    <button class="btn btn-outline" onclick="goTo(3)">← Anterior</button>
+    <button class="btn btn-primary" onclick="goTo(5)">Siguiente → Conducta</button>
+  </div>
+</div>
+
+<!-- SECCIÓN 5: CONDUCTA -->
+<div class="section-card" id="sec5">
+  <div class="section-head">
+    <div class="section-num">5</div>
+    <div>
+      <div class="section-title">Observación de conducta (SOC)</div>
+      <div class="section-desc">Registro de comportamientos seguros e inseguros observados</div>
+    </div>
+  </div>
+  <div class="section-body">
+    <table class="check-table">
+      <thead><tr><th>Conducta observada</th><th class="center" style="width:80px">Segura</th><th class="center" style="width:80px">Insegura</th><th style="width:220px">Retroalimentación</th></tr></thead>
+      <tbody id="conducta-body"></tbody>
+    </table>
+    <div class="divider"></div>
+    <div class="field-grid">
+      <div class="field"><label>Nombre del trabajador observado</label><input type="text" id="trabajador_obs" placeholder="Nombre completo"></div>
+      <div class="field">
+        <label>¿Se entregó retroalimentación?</label>
+        <div class="radio-row" id="retro-row">
+          <label class="radio-btn" onclick="selectRadio(this,'retro-row','sel-retro')"><input type="radio" name="retro" value="Sí, aceptada"> Sí, aceptada</label>
+          <label class="radio-btn" onclick="selectRadio(this,'retro-row','sel-retro')"><input type="radio" name="retro" value="Sí, con resistencia"> Sí, con resistencia</label>
+          <label class="radio-btn" onclick="selectRadio(this,'retro-row','sel-retro')"><input type="radio" name="retro" value="No fue necesario"> No fue necesario</label>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="nav-buttons">
+    <button class="btn btn-outline" onclick="goTo(4)">← Anterior</button>
+    <button class="btn btn-primary" onclick="goTo(6)">Siguiente → Fotos</button>
+  </div>
+</div>
+
+<!-- SECCIÓN 6: FOTOS -->
+<div class="section-card" id="sec6">
+  <div class="section-head">
+    <div class="section-num">6</div>
+    <div>
+      <div class="section-title">Registro fotográfico / evidencias</div>
+      <div class="section-desc">Adjuntar fotos del área, señalización y hallazgos (opcional)</div>
+    </div>
+  </div>
+  <div class="section-body">
+    <div class="foto-grid">
+      <div class="foto-box" onclick="document.getElementById('foto1-input').click()" id="foto1-box">
+        <input type="file" id="foto1-input" accept="image/*" onchange="loadFoto(this,'foto1-box','foto1-preview',1)">
+        <div id="foto1-preview"><div class="foto-icon">📷</div><div class="foto-label">Foto 1</div><div class="foto-sub">Condición general del área</div></div>
+        <input type="text" class="foto-desc-input" id="foto1-desc" placeholder="Descripción..." onclick="event.stopPropagation()" style="display:none">
+      </div>
+      <div class="foto-box" onclick="document.getElementById('foto2-input').click()" id="foto2-box">
+        <input type="file" id="foto2-input" accept="image/*" onchange="loadFoto(this,'foto2-box','foto2-preview',2)">
+        <div id="foto2-preview"><div class="foto-icon">📷</div><div class="foto-label">Foto 2</div><div class="foto-sub">Señalización instalada</div></div>
+        <input type="text" class="foto-desc-input" id="foto2-desc" placeholder="Descripción..." onclick="event.stopPropagation()" style="display:none">
+      </div>
+      <div class="foto-box" onclick="document.getElementById('foto3-input').click()" id="foto3-box">
+        <input type="file" id="foto3-input" accept="image/*" onchange="loadFoto(this,'foto3-box','foto3-preview',3)">
+        <div id="foto3-preview"><div class="foto-icon">📷</div><div class="foto-label">Foto 3</div><div class="foto-sub">EPP / conducta observada</div></div>
+        <input type="text" class="foto-desc-input" id="foto3-desc" placeholder="Descripción..." onclick="event.stopPropagation()" style="display:none">
+      </div>
+      <div class="foto-box" onclick="document.getElementById('foto4-input').click()" id="foto4-box">
+        <input type="file" id="foto4-input" accept="image/*" onchange="loadFoto(this,'foto4-box','foto4-preview',4)">
+        <div id="foto4-preview"><div class="foto-icon">📷</div><div class="foto-label">Foto 4</div><div class="foto-sub">Hallazgo / no conformidad</div></div>
+        <input type="text" class="foto-desc-input" id="foto4-desc" placeholder="Descripción..." onclick="event.stopPropagation()" style="display:none">
+      </div>
+    </div>
+  </div>
+  <div class="nav-buttons">
+    <button class="btn btn-outline" onclick="goTo(5)">← Anterior</button>
+    <button class="btn btn-primary" onclick="goTo(7)">Siguiente → Plan de acción</button>
+  </div>
+</div>
+
+<!-- SECCIÓN 7: ACCIONES -->
+<div class="section-card" id="sec7">
+  <div class="section-head">
+    <div class="section-num">7</div>
+    <div>
+      <div class="section-title">Plan de acción correctiva</div>
+      <div class="section-desc">Registrar hallazgos y compromisos de corrección</div>
+    </div>
+  </div>
+  <div class="section-body">
+    <table class="accion-table">
+      <thead><tr><th style="width:35%">Hallazgo / Desviación</th><th style="width:30%">Acción correctiva</th><th style="width:20%">Responsable</th><th style="width:15%">Fecha compromiso</th></tr></thead>
+      <tbody id="accion-body">
+        <tr><td><input type="text" placeholder="Describir hallazgo..." class="ac-h"></td><td><input type="text" placeholder="Acción..." class="ac-a"></td><td><input type="text" placeholder="Nombre" class="ac-r"></td><td><input type="date" class="ac-f"></td></tr>
+        <tr><td><input type="text" placeholder="Describir hallazgo..." class="ac-h"></td><td><input type="text" placeholder="Acción..." class="ac-a"></td><td><input type="text" placeholder="Nombre" class="ac-r"></td><td><input type="date" class="ac-f"></td></tr>
+        <tr><td><input type="text" placeholder="Describir hallazgo..." class="ac-h"></td><td><input type="text" placeholder="Acción..." class="ac-a"></td><td><input type="text" placeholder="Nombre" class="ac-r"></td><td><input type="date" class="ac-f"></td></tr>
+      </tbody>
+    </table>
+    <div class="divider"></div>
+    <div class="field">
+      <label>Nivel de riesgo del hallazgo principal</label>
+      <div class="riesgo-row">
+        <button type="button" class="riesgo-btn" data-nivel="Bajo" onclick="selectRiesgo(this)">Bajo</button>
+        <button type="button" class="riesgo-btn" data-nivel="Medio" onclick="selectRiesgo(this)">Medio</button>
+        <button type="button" class="riesgo-btn" data-nivel="Alto" onclick="selectRiesgo(this)">Alto</button>
+        <button type="button" class="riesgo-btn" data-nivel="Crítico" onclick="selectRiesgo(this)">Crítico</button>
+      </div>
+    </div>
+  </div>
+  <div class="nav-buttons">
+    <button class="btn btn-outline" onclick="goTo(6)">← Anterior</button>
+    <button class="btn btn-primary" onclick="goTo(8)">Siguiente → Cierre</button>
+  </div>
+</div>
+
+<!-- SECCIÓN 8: CIERRE -->
+<div class="section-card" id="sec8">
+  <div class="section-head">
+    <div class="section-num">8</div>
+    <div>
+      <div class="section-title">Conclusiones y cierre</div>
+      <div class="section-desc">Resumen, resultado final y firmas</div>
+    </div>
+  </div>
+  <div class="section-body">
+    <div class="field cols1" style="margin-bottom:1rem">
+      <label>Resumen de la inspección <span class="req">*</span></label>
+      <textarea id="resumen" placeholder="Describa el resultado general de la inspección, aspectos positivos y áreas de mejora..." style="min-height:100px"></textarea>
+    </div>
+    <div class="field">
+      <label>Resultado general <span class="req">*</span></label>
+      <div class="resultado-row">
+        <button type="button" class="resultado-btn" data-res="Conforme" onclick="selectResultado(this)">✓ Conforme</button>
+        <button type="button" class="resultado-btn" data-res="Conforme con observaciones" onclick="selectResultado(this)">⚠ Conforme con observaciones</button>
+        <button type="button" class="resultado-btn" data-res="No conforme" onclick="selectResultado(this)">✗ No conforme</button>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="field">
+      <label>📱 Número WhatsApp destino (opcional)</label>
+      <input type="tel" id="wsp-numero" placeholder="Ej: 56912345678 (con código de país, sin +)">
+      <span class="note">Si lo dejas en blanco, WhatsApp te pedirá elegir el contacto al enviar.</span>
+    </div>
+  </div>
+  <div class="nav-buttons">
+    <button class="btn btn-outline" onclick="goTo(7)">← Anterior</button>
+    <button class="btn btn-green" onclick="generarInforme()">📄 Generar informe</button>
+  </div>
+</div>
+
+</div><!-- /form-section -->
+
+<!-- ====================== INFORME ====================== -->
+<div id="informe-section">
+  <div class="informe-wrap" id="informe-content">
+    <div class="informe-header">
+      <div class="informe-header-row">
+        <div>
+          <div class="informe-titulo">Informe de Inspección de Seguridad</div>
+          <div class="informe-empresa">PYT SYSTEMS SpA</div>
+          <div class="informe-sub" id="inf-sub">Telecomunicaciones — FFOO</div>
+        </div>
+        <div id="inf-badge"></div>
+      </div>
+      <div class="informe-meta">
+        <div class="meta-item"><div class="meta-label">Supervisor</div><div class="meta-val" id="inf-supervisor">—</div></div>
+        <div class="meta-item"><div class="meta-label">Fecha</div><div class="meta-val" id="inf-fecha">—</div></div>
+        <div class="meta-item"><div class="meta-label">Ubicación</div><div class="meta-val" id="inf-ubicacion">—</div></div>
+      </div>
+    </div>
+
+    <div class="informe-body">
+      <div class="summary-boxes" id="inf-summary"></div>
+
+      <div class="inf-section">
+        <div class="inf-section-title">Datos de la orden de trabajo</div>
+        <div id="inf-datos-generales"></div>
+      </div>
+      <div class="inf-section">
+        <div class="inf-section-title">EPP y equipamiento <span id="score-epp" class="inf-score"></span></div>
+        <div id="inf-epp"></div>
+      </div>
+      <div class="inf-section">
+        <div class="inf-section-title">Señalización y demarcación <span id="score-señal" class="inf-score"></span></div>
+        <div id="inf-señal"></div>
+      </div>
+      <div class="inf-section">
+        <div class="inf-section-title">Herramientas y vehículos <span id="score-herr" class="inf-score"></span></div>
+        <div id="inf-herr"></div>
+      </div>
+      <div class="inf-section">
+        <div class="inf-section-title">Observación de conducta <span id="score-conducta" class="inf-score"></span></div>
+        <div id="inf-conducta"></div>
+      </div>
+      <div class="inf-section">
+        <div class="inf-section-title">Registro fotográfico</div>
+        <div class="foto-inf-grid" id="inf-fotos"></div>
+      </div>
+      <div class="inf-section">
+        <div class="inf-section-title">Plan de acción correctiva <span id="inf-riesgo-badge" class="inf-score"></span></div>
+        <div id="inf-acciones"></div>
+      </div>
+      <div class="inf-section">
+        <div class="inf-section-title">Conclusiones</div>
+        <div style="background:var(--gris-pale);border-radius:8px;padding:1rem;font-size:14px;line-height:1.7" id="inf-resumen"></div>
+      </div>
+
+      <div class="firma-row">
+        <div class="firma-box">
+          <div class="firma-title">Supervisor a cargo</div>
+          <div class="firma-name" id="inf-firma-sup">—</div>
+          <div class="firma-rut" id="inf-firma-sup-rut"></div>
+          <div class="firma-line"></div>
+          <div class="firma-sign-label">Firma</div>
+        </div>
+        <div class="firma-box">
+          <div class="firma-title">Inspector / Verificador HSE</div>
+          <div class="firma-name" style="margin-top:6px">_________________________</div>
+          <div class="firma-rut" style="margin-top:2px">Nombre y RUT</div>
+          <div class="firma-line"></div>
+          <div class="firma-sign-label">Firma</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="informe-footer">
+      <div class="informe-footer-text" id="inf-footer-text">PYT Systems SpA · HSE-FFOO</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-nueva" onclick="nuevaOT()">← Nueva OT</button>
+        <button class="btn-whatsapp" onclick="enviarWhatsApp()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="white" style="flex-shrink:0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+          Enviar por WhatsApp
+        </button>
+        <button class="btn-pdf" onclick="descargarPDF()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Descargar PDF
+        </button>
+        <button class="btn-email" onclick="abrirModalCorreo()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          Enviar por correo
+        </button>
+        <button class="btn-print" onclick="window.print()">🖨 Imprimir</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<!-- ====================== MODAL CORREO ====================== -->
+<div class="modal-overlay" id="modal-correo" onclick="cerrarModalSiOverlay(event)">
+  <div class="modal-box">
+    <div class="modal-title">📧 Enviar informe por correo</div>
+    <div class="modal-sub">Se enviará un resumen del informe al correo indicado.</div>
+
+    <div class="emailjs-config-note" id="emailjs-warning">
+      ⚠️ Para activar el envío de correos debes configurar tu cuenta EmailJS.<br>
+      Abre el archivo HTML y reemplaza <strong>iydR2l0PsvgxIRuAp</strong>, <strong>service_3wnyj0p</strong> y <strong>template_4fu2mnv</strong> con tus datos de <a href="https://www.emailjs.com" target="_blank" style="color:inherit">emailjs.com</a>
+    </div>
+
+    <div class="modal-field">
+      <label>Correo destinatario</label>
+      <input type="email" id="correo-destino" placeholder="ejemplo@correo.com">
+    </div>
+    <div class="modal-field">
+      <label>Tu nombre (remitente)</label>
+      <input type="text" id="correo-remitente" placeholder="Nombre del inspector">
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-btn-cancel" onclick="cerrarModalCorreo()">Cancelar</button>
+      <button class="modal-btn-send" id="btn-enviar-correo" onclick="enviarCorreo()">✉ Enviar informe</button>
+    </div>
+    <div class="modal-status" id="modal-status"></div>
+  </div>
+</div>
+
+<script>
+const EPP_ITEMS = [
+  "Casco de seguridad",
+  "Chaleco reflectante / alta visibilidad",
+  "Guantes de protección (dieléctricos / mecánicos)",
+  "Calzado de seguridad con punta de acero",
+  "Lentes de seguridad / protección ocular",
+  "Arnés y línea de vida (trabajo en altura)",
+  "Protección auditiva",
+];
+const SEÑAL_ITEMS = [
+  "Conos / tacos de seguridad instalados",
+  "Cinta de delimitación / malla de seguridad",
+  "Señalética vial (antes y después del área de trabajo)",
+  "Luz destellante / señalización nocturna (si aplica)",
+  "Permiso municipal / de tránsito vigente y disponible",
+  "Aviso a vecinos / afectados previo al trabajo",
+];
+const HERR_ITEMS = [
+  "Vehículo en buen estado (revisión técnica vigente)",
+  "Herramientas dieléctricas / aisladas en buen estado",
+  "Fusionadora / equipos ópticos con certificado de calibración",
+  "Extintores vigentes en vehículo",
+  "Botiquín de primeros auxilios disponible",
+];
+const CONDUCTA_ITEMS = [
+  "Uso correcto de EPP durante toda la tarea",
+  "Posición corporal y ergonomía al manipular materiales",
+  "Cumple procedimiento de trabajo seguro (PTS / AST)",
+  "Respeta zonas de peligro / distancias de seguridad",
+  "Comunicación efectiva con equipo y tránsito",
+  "No usa celular sin manos libres mientras conduce",
+];
+
+let estados = {};
+let fotos = { 1: null, 2: null, 3: null, 4: null };
+let riesgoSel = "";
+let resultadoSel = "";
+let supSel = null;
+let tiposSel = [];
+
+window.onload = function() {
+  document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+  buildTable('epp-body', EPP_ITEMS, 'epp', false);
+  buildTable('señal-body', SEÑAL_ITEMS, 'señal', false);
+  buildTable('herr-body', HERR_ITEMS, 'herr', false);
+  buildTable('conducta-body', CONDUCTA_ITEMS, 'conducta', true);
+};
+
+function buildTable(tbodyId, items, prefix, isConducta) {
+  const tbody = document.getElementById(tbodyId);
+  items.forEach((item, i) => {
+    const key = prefix + "_" + i;
+    estados[key] = null;
+    const tr = document.createElement('tr');
+    const v1 = isConducta ? "SEG" : "C";
+    const v2 = isConducta ? "INS" : "NC";
+    const c1 = isConducta ? "seg" : "ok";
+    const c2 = isConducta ? "ins" : "nc";
+    const naCol = !isConducta
+      ? `<td class="center"><span class="radio-check" id="${key}_na" onclick="toggle3('${key}','NA','na','${v1}','${c1}','${v2}','${c2}')"></span></td>`
+      : '';
+    tr.innerHTML = `
+      <td>${item}</td>
+      <td class="center"><span class="radio-check" id="${key}_${v1.toLowerCase()}" onclick="toggle3('${key}','${v1}','${c1}','${v2}','${c2}','NA','na')"></span></td>
+      <td class="center"><span class="radio-check" id="${key}_${v2.toLowerCase()}" onclick="toggle3('${key}','${v2}','${c2}','${v1}','${c1}','NA','na')"></span></td>
+      ${naCol}
+      <td class="obs"><input type="text" id="${key}_obs" placeholder="Obs..."></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function toggle3(key, val, cls, other1Val, other1Cls, other2Val, other2Cls) {
+  const el  = document.getElementById(key + "_" + val.toLowerCase());
+  const ot1 = document.getElementById(key + "_" + other1Val.toLowerCase());
+  const ot2 = document.getElementById(key + "_" + other2Val.toLowerCase());
+  if (estados[key] === val) {
+    estados[key] = null;
+    el.className = 'radio-check';
+  } else {
+    estados[key] = val;
+    el.className = 'radio-check ' + cls;
+    if (ot1) ot1.className = 'radio-check';
+    if (ot2) ot2.className = 'radio-check';
+  }
+}
+
+function goTo(n) {
+  document.querySelectorAll('.section-card').forEach(c => c.classList.remove('active'));
+  document.getElementById('sec' + n).classList.add('active');
+  document.querySelectorAll('.step-pill').forEach((p, i) => {
+    p.classList.remove('active','done');
+    if (i+1 < n) p.classList.add('done');
+    else if (i+1 === n) p.classList.add('active');
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function selectRadio(el, rowId, cls) {
+  document.querySelectorAll('#' + rowId + ' .radio-btn').forEach(b => b.classList.remove(cls));
+  el.classList.add(cls);
+}
+
+function selectSup(card) {
+  document.querySelectorAll('.sup-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  supSel = { nombre: card.dataset.nombre, rut: card.dataset.rut };
+  document.getElementById('ot-display').textContent = v('ot') ? 'OT ' + v('ot') : 'OT —';
+}
+
+function toggleTipo(btn) {
+  const tipo = btn.dataset.tipo;
+  if (tipo === 'otro') {
+    btn.classList.toggle('sel');
+    const wrap = document.getElementById('tipo-otro-wrap');
+    wrap.classList.toggle('show', btn.classList.contains('sel'));
+    return;
+  }
+  btn.classList.toggle('sel');
+  tiposSel = Array.from(document.querySelectorAll('.tipo-btn.sel:not([data-tipo="otro"])')).map(b => b.dataset.tipo);
+}
+
+function selectRiesgo(btn) {
+  document.querySelectorAll('.riesgo-btn').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  riesgoSel = btn.dataset.nivel;
+}
+
+function selectResultado(btn) {
+  document.querySelectorAll('.resultado-btn').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  resultadoSel = btn.dataset.res;
+}
+
+function loadFoto(input, boxId, previewId, num) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    fotos[num] = { src: e.target.result };
+    document.getElementById(boxId).classList.add('has-foto');
+    document.getElementById(previewId).innerHTML = `<img src="${e.target.result}" class="foto-preview"><div style="font-size:12px;color:var(--verde)">✓ Foto cargada</div>`;
+    document.getElementById('foto'+num+'-desc').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function v(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
+function getRadio(name) { const el = document.querySelector(`input[name="${name}"]:checked`); return el ? el.value : ''; }
+
+function generarInforme() {
+  if (!resultadoSel) { alert('Por favor seleccione el resultado general en la sección 8.'); return; }
+
+  const fecha = v('fecha');
+  const fechaFmt = fecha ? new Date(fecha+'T12:00:00').toLocaleDateString('es-CL',{day:'2-digit',month:'long',year:'numeric'}) : '—';
+
+  // Badge
+  const bClass = resultadoSel==='Conforme'?'badge-conforme':resultadoSel==='Conforme con observaciones'?'badge-observaciones':'badge-noconforme';
+  document.getElementById('inf-badge').innerHTML = `<span class="informe-badge ${bClass}">${resultadoSel}</span>`;
+
+  // Tipos seleccionados
+  const otroTipo = v('tipo-otro');
+  let tiposList = [...tiposSel];
+  if (document.querySelector('.tipo-btn[data-tipo="otro"]')?.classList.contains('sel') && otroTipo) tiposList.push(otroTipo);
+
+  // Header
+  document.getElementById('inf-supervisor').textContent = supSel ? supSel.nombre.split(' ').slice(0,2).join(' ') : '—';
+  document.getElementById('inf-fecha').textContent = fechaFmt;
+  document.getElementById('inf-ubicacion').textContent = v('direccion') || '—';
+  document.getElementById('inf-sub').textContent = tiposList.length ? tiposList.join(' · ') : 'Telecomunicaciones — FFOO';
+
+  // Summary
+  let cumple=0, noCumple=0, seguras=0, inseguras=0;
+  EPP_ITEMS.forEach((_,i)=>{ const s=estados['epp_'+i]; if(s==='C') cumple++; else if(s==='NC') noCumple++; });
+  SEÑAL_ITEMS.forEach((_,i)=>{ const s=estados['señal_'+i]; if(s==='C') cumple++; else if(s==='NC') noCumple++; });
+  HERR_ITEMS.forEach((_,i)=>{ const s=estados['herr_'+i]; if(s==='C') cumple++; else if(s==='NC') noCumple++; });
+  CONDUCTA_ITEMS.forEach((_,i)=>{ const s=estados['conducta_'+i]; if(s==='SEG') seguras++; else if(s==='INS') inseguras++; });
+  document.getElementById('inf-summary').innerHTML = `
+    <div class="sum-box"><div class="sum-num sum-green">${cumple}</div><div class="sum-label">Ítems conformes</div></div>
+    <div class="sum-box"><div class="sum-num sum-red">${noCumple}</div><div class="sum-label">No conformidades</div></div>
+    <div class="sum-box"><div class="sum-num sum-green">${seguras}</div><div class="sum-label">Conductas seguras</div></div>
+    <div class="sum-box"><div class="sum-num sum-amber">${inseguras}</div><div class="sum-label">Conductas inseguras</div></div>
+  `;
+
+  // Datos generales
+  const rows = [
+    ['Empresa', 'PYT Systems SpA'],
+    ['Fecha', fechaFmt],
+    ['Horario', (v('hora_ini')||'—') + ' a ' + (v('hora_fin')||'—')],
+    ['Supervisor', supSel ? supSel.nombre : '—'],
+    ['RUT Supervisor', supSel ? supSel.rut : '—'],
+    ['Dirección', v('direccion')],
+    ['Región', v('region')],
+    ['Tipos de trabajo', tiposList.join(', ') || '—'],
+    ['N° Trabajadores', v('ntrabajadores')],
+    ['Condición climática', getRadio('clima')],
+  ];
+  let dgHtml = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0">';
+  rows.forEach(([k,val]) => {
+    dgHtml += `<div style="padding:7px 0;border-bottom:1px solid #F3F4F6;display:flex;gap:8px;font-size:14px">
+      <span style="color:var(--text-soft);min-width:160px;flex-shrink:0">${k}</span>
+      <span style="font-weight:500">${val||'—'}</span></div>`;
+  });
+  dgHtml += '</div>';
+  document.getElementById('inf-datos-generales').innerHTML = dgHtml;
+
+  // Secciones check
+  renderCheck('inf-epp','score-epp',EPP_ITEMS,'epp');
+  renderCheck('inf-señal','score-señal',SEÑAL_ITEMS,'señal');
+  renderCheck('inf-herr','score-herr',HERR_ITEMS,'herr');
+
+  // Conducta
+  let cHtml = '';
+  CONDUCTA_ITEMS.forEach((item,i) => {
+    const s = estados['conducta_'+i];
+    const obs = document.getElementById('conducta_'+i+'_obs')?.value||'';
+    let st = '<span class="inf-status st-no">—</span>';
+    if(s==='SEG') st = '<span class="inf-status st-seg">Segura</span>';
+    if(s==='INS') st = '<span class="inf-status st-ins">Insegura</span>';
+    cHtml += `<div class="inf-check-row"><span>${item}${obs?`<span class="inf-obs"> — ${obs}</span>`:''}</span>${st}</div>`;
+  });
+  if(v('trabajador_obs')) cHtml += `<div style="margin-top:10px;font-size:13px;color:var(--text-soft)">Trabajador observado: <strong>${v('trabajador_obs')}</strong> · Retroalimentación: <strong>${getRadio('retro')||'—'}</strong></div>`;
+  document.getElementById('inf-conducta').innerHTML = cHtml;
+  const pctC = Math.round((seguras/CONDUCTA_ITEMS.length)*100);
+  const sc = document.getElementById('score-conducta');
+  sc.textContent = `${seguras}/${CONDUCTA_ITEMS.length} seguras`;
+  sc.className = 'inf-score '+(pctC>=80?'score-ok':pctC>=50?'score-warn':'score-bad');
+
+  // Fotos
+  let fotosHtml = '';
+  const fLabels = ['Condición general','Señalización','EPP / conducta','Hallazgo'];
+  [1,2,3,4].forEach(n => {
+    const desc = document.getElementById('foto'+n+'-desc')?.value || fLabels[n-1];
+    if(fotos[n]) fotosHtml += `<div class="foto-inf-item"><img src="${fotos[n].src}"><div class="foto-inf-desc">${desc}</div></div>`;
+    else fotosHtml += `<div class="foto-inf-item"><div class="foto-placeholder">📷</div><div class="foto-inf-desc" style="color:var(--gris)">${fLabels[n-1]}</div></div>`;
+  });
+  document.getElementById('inf-fotos').innerHTML = fotosHtml;
+
+  // Acciones
+  const acRows = document.querySelectorAll('#accion-body tr');
+  let acciones = [];
+  acRows.forEach(r => { const h=r.querySelector('.ac-h')?.value; if(h) acciones.push({h,a:r.querySelector('.ac-a')?.value||'',r:r.querySelector('.ac-r')?.value||'',f:r.querySelector('.ac-f')?.value||''}); });
+  if(acciones.length) {
+    let aHtml = `<table class="accion-inf-table"><thead><tr><th>Hallazgo</th><th>Acción correctiva</th><th>Responsable</th><th>Fecha</th></tr></thead><tbody>`;
+    acciones.forEach(a => { const ff=a.f?new Date(a.f+'T12:00:00').toLocaleDateString('es-CL'):'—'; aHtml+=`<tr><td>${a.h}</td><td>${a.a}</td><td>${a.r}</td><td>${ff}</td></tr>`; });
+    aHtml += '</tbody></table>';
+    document.getElementById('inf-acciones').innerHTML = aHtml;
+  } else { document.getElementById('inf-acciones').innerHTML = '<p style="font-size:14px;color:var(--gris);font-style:italic">Sin acciones correctivas registradas.</p>'; }
+
+  if(riesgoSel) {
+    const rb = document.getElementById('inf-riesgo-badge');
+    rb.textContent = 'Riesgo: '+riesgoSel;
+    rb.className = 'inf-score '+(riesgoSel==='Bajo'?'score-ok':riesgoSel==='Medio'?'score-warn':'score-bad');
+  }
+
+  document.getElementById('inf-resumen').textContent = v('resumen')||'(Sin resumen)';
+  document.getElementById('inf-firma-sup').textContent = supSel ? supSel.nombre : '—';
+  document.getElementById('inf-firma-sup-rut').textContent = supSel ? 'RUT: '+supSel.rut : '';
+  document.getElementById('inf-footer-text').textContent = `PYT Systems SpA · ${fechaFmt}`;
+
+  document.getElementById('form-section').style.display = 'none';
+  document.getElementById('informe-section').style.display = 'block';
+  document.getElementById('progress-wrap').style.display = 'none';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function renderCheck(elId, scoreId, items, prefix) {
+  let cumple=0, noCumple=0, aplicables=0;
+  let html='';
+  items.forEach((item,i) => {
+    const s = estados[prefix+'_'+i];
+    const obs = document.getElementById(prefix+'_'+i+'_obs')?.value||'';
+    let st = '<span class="inf-status st-no">Sin marcar</span>';
+    if(s==='C')  { st='<span class="inf-status st-c">Cumple</span>'; cumple++; aplicables++; }
+    if(s==='NC') { st='<span class="inf-status st-nc">No cumple</span>'; aplicables++; }
+    if(s==='NA') { st='<span class="inf-status st-na">No aplica</span>'; }
+    if(s===null) aplicables++;
+    html += `<div class="inf-check-row"><span>${item}${obs?`<span class="inf-obs"> — ${obs}</span>`:''}</span>${st}</div>`;
+  });
+  document.getElementById(elId).innerHTML = html;
+  const pct = aplicables > 0 ? Math.round((cumple/aplicables)*100) : 100;
+  const sc = document.getElementById(scoreId);
+  sc.textContent = `${cumple}/${aplicables} (${pct}%)`;
+  sc.className = 'inf-score '+(pct>=80?'score-ok':pct>=50?'score-warn':'score-bad');
+}
+
+// ====================== EMAILJS CONFIG ======================
+// 1. Crea cuenta gratis en https://www.emailjs.com
+// 2. Crea un Email Service (Gmail, Outlook, etc.)
+// 3. Crea un Email Template con variables: {{to_email}}, {{from_name}}, {{fecha}}, {{supervisor}},
+//    {{ubicacion}}, {{resultado}}, {{riesgo}}, {{cumple}}, {{no_cumple}}, {{seguras}}, {{inseguras}}, {{hallazgos}}, {{resumen}}
+// 4. Reemplaza los valores abajo con los tuyos
+const EMAILJS_PUBLIC_KEY  = 'iydR2l0PsvgxIRuAp';   // Settings > General > Public Key
+const EMAILJS_SERVICE_ID  = 'service_3wnyj0p';   // Email Services > tu servicio
+const EMAILJS_TEMPLATE_ID = 'template_4fu2mnv';  // Email Templates > tu plantilla
+
+// ====================== DESCARGA PDF ======================
+function descargarPDF() {
+  const element = document.getElementById('informe-content');
+  const supervisor = supSel ? supSel.nombre.replace(/ /g,'_') : 'Inspector';
+  const fecha = v('fecha') || new Date().toISOString().split('T')[0];
+  const filename = `Inspeccion_Seguridad_${supervisor}_${fecha}.pdf`;
+
+  const footer = element.querySelector('.informe-footer');
+  if (footer) footer.style.display = 'none';
+
+  const opt = {
+    margin:       [10, 10, 10, 10],
+    filename:     filename,
+    image:        { type: 'jpeg', quality: 0.95 },
+    html2canvas:  { scale: 2, useCORS: true, logging: false },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak:    { mode: ['avoid-all', 'css'] }
+  };
+
+  html2pdf().set(opt).from(element).save()
+    .then(() => { if (footer) footer.style.display = ''; })
+    .catch(() => {
+      if (footer) footer.style.display = '';
+      alert('Error al generar el PDF. Intenta con "Imprimir" del navegador.');
+    });
+}
+
+// ====================== MODAL CORREO ======================
+function abrirModalCorreo() {
+  const configured = EMAILJS_PUBLIC_KEY !== 'TU_PUBLIC_KEY_PLACEHOLDER';
+  document.getElementById('emailjs-warning').classList.toggle('show', !configured);
+  document.getElementById('modal-status').textContent = '';
+  document.getElementById('modal-correo').classList.add('open');
+  document.getElementById('correo-destino').focus();
+}
+
+function cerrarModalCorreo() {
+  document.getElementById('modal-correo').classList.remove('open');
+}
+
+function cerrarModalSiOverlay(e) {
+  if (e.target === document.getElementById('modal-correo')) cerrarModalCorreo();
+}
+
+function enviarCorreo() {
+  const destino = document.getElementById('correo-destino').value.trim();
+  const remitente = document.getElementById('correo-remitente').value.trim();
+  const statusEl = document.getElementById('modal-status');
+  const btnEl = document.getElementById('btn-enviar-correo');
+
+  if (!destino) { statusEl.textContent = '⚠ Ingresa un correo destinatario.'; statusEl.className = 'modal-status err'; return; }
+  if (EMAILJS_PUBLIC_KEY === 'TU_PUBLIC_KEY_PLACEHOLDER') {
+    statusEl.textContent = '⚠ Configura EmailJS en el archivo HTML primero.'; statusEl.className = 'modal-status err'; return;
+  }
+
+  let cumple=0, noCumple=0, seguras=0, inseguras=0;
+  EPP_ITEMS.forEach((_,i)=>{ const s=estados['epp_'+i]; if(s==='C') cumple++; else if(s==='NC') noCumple++; });
+  SEÑAL_ITEMS.forEach((_,i)=>{ const s=estados['señal_'+i]; if(s==='C') cumple++; else if(s==='NC') noCumple++; });
+  HERR_ITEMS.forEach((_,i)=>{ const s=estados['herr_'+i]; if(s==='C') cumple++; else if(s==='NC') noCumple++; });
+  CONDUCTA_ITEMS.forEach((_,i)=>{ const s=estados['conducta_'+i]; if(s==='SEG') seguras++; else if(s==='INS') inseguras++; });
+
+  const fecha = v('fecha') ? new Date(v('fecha')+'T12:00:00').toLocaleDateString('es-CL',{day:'2-digit',month:'long',year:'numeric'}) : '—';
+  const acRows = document.querySelectorAll('#accion-body tr');
+  let hallazgos = [];
+  acRows.forEach(r => { const h=r.querySelector('.ac-h')?.value; if(h) hallazgos.push('• '+h); });
+
+  const templateParams = {
+    to_email:  destino,
+    from_name: remitente || 'PYT Systems SpA',
+    fecha, supervisor: supSel ? supSel.nombre : '—',
+    ubicacion: v('direccion') || '—',
+    resultado: resultadoSel || '—',
+    riesgo:    riesgoSel || '—',
+    cumple, no_cumple: noCumple, seguras, inseguras,
+    hallazgos: hallazgos.join('\n') || 'Sin hallazgos registrados.',
+    resumen:   v('resumen') || '(Sin resumen)',
+    empresa:   'PYT Systems SpA'
+  };
+
+  btnEl.disabled = true; btnEl.textContent = 'Enviando...';
+  statusEl.textContent = ''; statusEl.className = 'modal-status';
+
+  emailjs.init(EMAILJS_PUBLIC_KEY);
+  emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams)
+    .then(() => {
+      statusEl.textContent = '✅ ¡Correo enviado exitosamente!';
+      statusEl.className = 'modal-status ok';
+      btnEl.disabled = false; btnEl.textContent = '✉ Enviar informe';
+      setTimeout(() => cerrarModalCorreo(), 2500);
+    })
+    .catch((err) => {
+      console.error('EmailJS error:', err);
+      statusEl.textContent = '❌ Error al enviar. Revisa tu configuración EmailJS.';
+      statusEl.className = 'modal-status err';
+      btnEl.disabled = false; btnEl.textContent = '✉ Enviar informe';
+    });
+}
+
+function nuevaOT() {
+  if(confirm('¿Iniciar una nueva orden de trabajo? Se perderán los datos actuales.')) location.reload();
+}
+
+function enviarWhatsApp() {
+  const sup = supSel ? supSel.nombre : '—';
+  const fecha = document.getElementById('inf-fecha').textContent;
+  const ubicacion = v('direccion') || '—';
+  const resultado = resultadoSel || '—';
+  const clima = getRadio('clima') || '—';
+
+  // Contar cumplimiento
+  let cumple=0, noCumple=0, seguras=0, inseguras=0;
+  EPP_ITEMS.forEach((_,i)=>{ const s=estados['epp_'+i]; if(s==='C') cumple++; else if(s==='NC') noCumple++; });
+  SEÑAL_ITEMS.forEach((_,i)=>{ const s=estados['señal_'+i]; if(s==='C') cumple++; else if(s==='NC') noCumple++; });
+  HERR_ITEMS.forEach((_,i)=>{ const s=estados['herr_'+i]; if(s==='C') cumple++; else if(s==='NC') noCumple++; });
+  CONDUCTA_ITEMS.forEach((_,i)=>{ const s=estados['conducta_'+i]; if(s==='SEG') seguras++; else if(s==='INS') inseguras++; });
+
+  // Hallazgos
+  const acRows = document.querySelectorAll('#accion-body tr');
+  let hallazgos = [];
+  acRows.forEach(r => { const h=r.querySelector('.ac-h')?.value; if(h) hallazgos.push('• '+h); });
+
+  const resumen = v('resumen');
+
+  // Tipos de trabajo
+  const tiposSelBtn = Array.from(document.querySelectorAll('.tipo-btn.sel:not([data-tipo="otro"])')).map(b=>b.dataset.tipo);
+  if(document.querySelector('.tipo-btn[data-tipo="otro"]')?.classList.contains('sel') && v('tipo-otro')) tiposSelBtn.push(v('tipo-otro'));
+
+  let msg = `🔧 *INSPECCIÓN DE SEGURIDAD — PYT SYSTEMS SpA*\n`;
+  msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+  msg += `📅 *Fecha:* ${fecha}\n`;
+  msg += `📍 *Ubicación:* ${ubicacion}\n`;
+  msg += `👷 *Supervisor:* ${sup}\n`;
+  if(tiposSelBtn.length) msg += `🔩 *Trabajo:* ${tiposSelBtn.join(', ')}\n`;
+  msg += `🌤 *Clima:* ${clima}\n`;
+  msg += `\n📊 *RESULTADO: ${resultado.toUpperCase()}*\n`;
+  msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+  msg += `✅ Ítems conformes: ${cumple}\n`;
+  msg += `❌ No conformidades: ${noCumple}\n`;
+  msg += `👁 Conductas seguras: ${seguras}\n`;
+  msg += `⚠️ Conductas inseguras: ${inseguras}\n`;
+  if(riesgoSel) msg += `🚨 Nivel de riesgo: *${riesgoSel}*\n`;
+  if(hallazgos.length) {
+    msg += `\n📋 *HALLAZGOS:*\n`;
+    msg += hallazgos.join('\n') + '\n';
+  }
+  if(resumen) {
+    msg += `\n📝 *RESUMEN:*\n${resumen}\n`;
+  }
+  msg += `\n_Informe generado por PYT Systems SpA_`;
+
+  const tel = v('wsp-numero').replace(/\D/g,'');
+  const url = tel
+    ? `https://wa.me/${tel}?text=${encodeURIComponent(msg)}`
+    : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+}
+
+
+</script>
+</body>
+</html>
